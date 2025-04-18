@@ -3,12 +3,16 @@ package com.MinecraftAIPlugin.listener;
 import com.MinecraftAIPlugin.NPCPlugin;
 import com.MinecraftAIPlugin.model.ConversationSession;
 import com.MinecraftAIPlugin.utils.OllamaAPI;
+import static com.MinecraftAIPlugin.NPCPlugin.getSystemPrompt;
+
 import org.bukkit.ChatColor;
 import org.bukkit.entity.*;
 import org.bukkit.event.*;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 
+import java.util.Optional;
 import java.util.UUID;
+
 
 public class EntityInteractionListener implements Listener {
 
@@ -23,57 +27,52 @@ public class EntityInteractionListener implements Listener {
         Player player = event.getPlayer();
         Entity entity = event.getRightClicked();
 
+        // Vérification si l'entité a un nom personnalisé
         if (entity.getCustomName() == null) {
             player.sendMessage(ChatColor.YELLOW + "This entity has no name.");
             return;
         }
 
+        // Récupère le nom du NPC et l'ID du joueur
         String npcName = entity.getCustomName();
         UUID playerId = player.getUniqueId();
-        var conversations = plugin.getActiveConversations();
 
-        ConversationSession session;
+        // Récupère ou crée une nouvelle session de conversation
+        Optional<ConversationSession> optionalSession = plugin.getConversation(playerId);
+        ConversationSession session = optionalSession.orElseGet(() -> {
+            ConversationSession newSession = new ConversationSession(npcName);
+            newSession.addMessage("system", getSystemPrompt(npcName));
+            plugin.newConversation(playerId, newSession);
+            return newSession;
+        });
 
-        if (conversations.containsKey(playerId)) {
-            session = conversations.get(playerId);
-            if (!session.getNpcName().equals(npcName)) {
-                player.sendMessage(ChatColor.GRAY + "* You switched to talk to " + ChatColor.GOLD + npcName);
-                session = new ConversationSession(npcName);
-                session.addMessage("system", getSystemPrompt(npcName));
-                conversations.put(playerId, session);
-            } else {
-                player.sendMessage(ChatColor.GRAY + "* You are already talking to " + ChatColor.GOLD + npcName);
-            }
-        } else {
-            player.sendMessage(ChatColor.GRAY + "* You start talking to " + ChatColor.GOLD + npcName);
-            session = new ConversationSession(npcName);
+        String response;
+        boolean newConversation = false;
+
+        // Si c'est un nouveau NPC ou une nouvelle session de conversation
+        if (!session.getNpcName().equals(npcName)) {
+            // Indiquer que le joueur commence une nouvelle conversation avec un NPC différent
+            player.sendMessage(ChatColor.GRAY + "* You switched to talk to " + ChatColor.GOLD + npcName);
+            newConversation = true;
+
+            // Génére une nouvelle réponse du NPC
+            response = OllamaAPI.generateResponse(getSystemPrompt(npcName), plugin.getLogger());
+            session = new ConversationSession(npcName);  // Crée une nouvelle session
             session.addMessage("system", getSystemPrompt(npcName));
-            conversations.put(playerId, session);
+            plugin.newConversation(playerId, session);
+
+        } else {
+            // Utilise la session existante pour obtenir la réponse du même NPC
+            response = OllamaAPI.getResponseFromOllama(session, plugin.getLogger());
         }
 
-        // Génère la réponse du NPC
-        String response = OllamaAPI.getResponseFromOllama(session, plugin.getLogger());
+        // Ajoute la réponse du NPC à la session de conversation
         session.addMessage("npc", response);
 
         // Affiche la réponse au joueur
         player.sendMessage(ChatColor.GOLD + npcName + ChatColor.WHITE + ": " + response);
 
-        // Après coup : met à jour la mémoire par embeddings
-        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
-            float[] embedding = OllamaAPI.getEmbedding(response, plugin.getLogger());
-            if (embedding != null) {
-                session.setEmbeddingMemory(embedding);
-
-                // Mode debug : affiche la mémoire actuelle et le log de la session
-                if (plugin.getConfig().getBoolean("debug", false)) {
-                    plugin.getLogger().info("[DEBUG] NPC: " + npcName + " - updated embedding memory.");
-                    session.printDebugInfo();
-                }
-            }
-        });
-    }
-
-    private String getSystemPrompt(String npcName) {
-        return "You are a medieval NPC named " + npcName + ". The player wants to talk to you. Introduce yourself and ask a question.";
+        // Affiche toute la conversation pour le débogage
+        session.printFullConversation(plugin.getLogger());
     }
 }

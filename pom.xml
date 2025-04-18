@@ -6,7 +6,7 @@
 
     <groupId>com.MinecraftAIPlugin</groupId>
     <artifactId>npc-dialogue</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.2-SNAPCHOT</version>
     <name>NPCDialoguePlugin</name>
     <description>A minecraft plugin with LLM for NPC</description>
 

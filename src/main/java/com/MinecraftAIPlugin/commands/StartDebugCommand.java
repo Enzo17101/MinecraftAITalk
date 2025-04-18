@@ -7,6 +7,9 @@ import org.bukkit.command.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.logging.Logger;
+
+import static com.MinecraftAIPlugin.NPCPlugin.getSystemPrompt;
 
 public class StartDebugCommand implements CommandExecutor {
 
@@ -25,13 +28,17 @@ public class StartDebugCommand implements CommandExecutor {
         String npcName = "Eldon";
 
         ConversationSession session = new ConversationSession(npcName);
-        session.addMessage("system", "You are a medieval NPC named " + npcName + ". The player wants to talk to you. Introduce yourself and ask a question.");
+
+        // Message de test
+        session.addMessage("system", getSystemPrompt(npcName));
 
         plugin.getActiveConversations().put(DEBUG_UUID, session);
 
-        String response = OllamaAPI.getResponseFromOllama(session, plugin.getLogger());
+        String response = OllamaAPI.generateResponse(getSystemPrompt(npcName), plugin.getLogger());
         session.addMessage("npc", response);
-        plugin.getLogger().info("[DEBUG][" + npcName + "] " + response);
+        //plugin.getLogger().info("[DEBUG][" + npcName + "] " + response);
+
+        session.printFullConversation(plugin.getLogger());
 
         return true;
     }

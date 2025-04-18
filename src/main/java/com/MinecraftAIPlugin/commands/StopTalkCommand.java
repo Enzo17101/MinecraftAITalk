@@ -18,6 +18,7 @@ public class StopTalkCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // Récupère l'uuid du joueur
         final UUID sessionId = (sender instanceof Player)
                 ? ((Player) sender).getUniqueId()
                 : UUID.nameUUIDFromBytes("debug-session".getBytes(StandardCharsets.UTF_8));
