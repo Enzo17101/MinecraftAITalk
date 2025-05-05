@@ -6,9 +6,9 @@
 
     <groupId>com.MinecraftAIPlugin</groupId>
     <artifactId>npc-dialogue</artifactId>
-    <version>0.2-SNAPCHOT</version>
+    <version>0.3-Ollama-SNAPCHOT</version>
     <name>NPCDialoguePlugin</name>
-    <description>A minecraft plugin with LLM for NPC</description>
+    <description>A minecraft plugin with LLM for NPC with Ollama</description>
 
     <repositories>
         <repository>
